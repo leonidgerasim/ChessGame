@@ -1,9 +1,11 @@
 import chess
+import chess.engine
 from chess import copy
 from gui_components.boards import ChessBoard
 import numpy as np
-import keras
+import math
 from train_model.dataoperate import bitboard
+import random
 
 
 class AIPlayer:
@@ -19,24 +21,12 @@ class AIPlayer:
         return list(board.legal_moves)
 
     def choose_move(self, board: chess.Board=None):
-        legal_moves = self.get_legal_moves()
-        model = keras.saving.load_model("train_model/models/model"+str(self.count)+".keras")
-
-        max_estimation = 0
-        i = 0
-
-        if len(legal_moves) != 0 and not board:
-            board = self.board
-            for index in range(len(legal_moves)):
-                tboard = board.copy()
-                tboard.push_san(str(legal_moves[index]))
-                x = np.array([bitboard(tboard), ])
-                if model(x) > max_estimation:
-                    max_estimation = model(x)
-                    i = index
-            chosen_move = legal_moves[i]
-        else:
-            chosen_move = None
+        engine = load_engine_from_cmd('./sunfish.py')
+        limit = chess.engine.Limit(
+            white_clock=30, black_clock=30, white_inc=1, black_inc=1
+        )
+        game_id = random.random()
+        chosen_move = self.board.san(get_engine_move(engine, self.board, limit, game_id, debug=False))
 
         # for move in legal_moves:
         #     evaluation_before = self.evaluate_board()
@@ -78,4 +68,83 @@ class AIPlayer:
         move = self.choose_move()
         chess_board._play(move=move)
         self.count += 1
+
+
+def load_engine_from_cmd(path, debug=False):
+    engine = chess.engine.popen_uci(path)
+    if hasattr(engine, "debug"):
+        engine.debug(debug)
+    return engine
+
+
+async def get_engine_move(engine, board, limit, game_id, multipv=1, debug=False):
+    if isinstance(engine, chess.engine.XBoardProtocol):
+        play_result = await engine.play(board, limit, game=game_id)
+        return play_result.move
+
+    multipv = min(multipv, board.legal_moves.count())
+    with await engine.analysis(
+        board, limit, game=game_id, info=chess.engine.INFO_ALL, multipv=multipv or None
+    ) as analysis:
+
+        infos = [None for _ in range(multipv)]
+        first = True
+        async for new_info in analysis:
+            # If multipv = 0 it means we don't want them at all,
+            # but uci requires MultiPV to be at least 1.
+            if multipv and "multipv" in new_info:
+                infos[new_info["multipv"] - 1] = new_info
+
+            # Parse optional arguments into a dict
+            if debug and "string" in new_info:
+                print(new_info["string"])
+
+            if not debug and all(infos) and "score" in analysis.info:
+                if not first:
+                    # print('\n'*(multipv+1), end='')
+                    print(f"\u001b[1A\u001b[K" * (multipv + 1), end="")
+                else:
+                    first = False
+
+                info = analysis.info
+                score = info["score"].relative
+                score = (
+                    f"Score: {score.score()}"
+                    if score.score() is not None
+                    else f"Mate in {score.mate()}"
+                )
+                print(
+                    f'{score}, nodes: {info.get("nodes", "N/A")}, nps: {info.get("nps", "N/A")},'
+                    f' time: {float(info.get("time", 0)):.1f}',
+                    end="",
+                )
+                print()
+
+                for info in infos:
+                    if "pv" in info:
+                        variation = board.variation_san(info["pv"][:10])
+                    else:
+                        variation = ""
+
+                    if "score" in info:
+                        score = info["score"].relative
+                        score = (
+                            math.tanh(score.score() / 600)
+                            if score.score() is not None
+                            else score.mate()
+                        )
+                        key, *val = info.get("string", "").split()
+                        if key == "pv_nodes":
+                            nodes = int(val[0])
+                            rel = nodes / analysis.info["nodes"]
+                            score_rel = f"({score:.2f}, {rel*100:.0f}%)"
+                        else:
+                            score_rel = f"({score:.2f})"
+                    else:
+                        score_rel = ""
+
+                    # Something about N
+                    print(f'{info["multipv"]}: {score_rel} {variation}')
+
+        return analysis.info["pv"][0]
 
