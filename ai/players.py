@@ -4,8 +4,66 @@ from chess import copy
 from gui_components.boards import ChessBoard
 import numpy as np
 import math
-from train_model.dataoperate import bitboard
 import random
+
+
+piece_score = {'K': 0, "Q": 9, "R": 5, "B": 3, "N": 3, "P": 1, 'k': 0, "q": 9, "r": 5, "b": 3, "n": 3, "p": 1}
+
+knight_scores = [[0.0, 0.1, 0.2, 0.2, 0.2, 0.2, 0.1, 0.0],
+                 [0.1, 0.3, 0.5, 0.5, 0.5, 0.5, 0.3, 0.1],
+                 [0.2, 0.5, 0.6, 0.65, 0.65, 0.6, 0.5, 0.2],
+                 [0.2, 0.55, 0.65, 0.7, 0.7, 0.65, 0.55, 0.2],
+                 [0.2, 0.5, 0.65, 0.7, 0.7, 0.65, 0.5, 0.2],
+                 [0.2, 0.55, 0.6, 0.65, 0.65, 0.6, 0.55, 0.2],
+                 [0.1, 0.3, 0.5, 0.55, 0.55, 0.5, 0.3, 0.1],
+                 [0.0, 0.1, 0.2, 0.2, 0.2, 0.2, 0.1, 0.0]]
+
+bishop_scores = [[0.0, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.0],
+                 [0.2, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.2],
+                 [0.2, 0.4, 0.5, 0.6, 0.6, 0.5, 0.4, 0.2],
+                 [0.2, 0.5, 0.5, 0.6, 0.6, 0.5, 0.5, 0.2],
+                 [0.2, 0.4, 0.6, 0.6, 0.6, 0.6, 0.4, 0.2],
+                 [0.2, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.2],
+                 [0.2, 0.5, 0.4, 0.4, 0.4, 0.4, 0.5, 0.2],
+                 [0.0, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.0]]
+
+rook_scores = [[0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25],
+               [0.5, 0.75, 0.75, 0.75, 0.75, 0.75, 0.75, 0.5],
+               [0.0, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.0],
+               [0.0, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.0],
+               [0.0, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.0],
+               [0.0, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.0],
+               [0.0, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.0],
+               [0.25, 0.25, 0.25, 0.5, 0.5, 0.25, 0.25, 0.25]]
+
+queen_scores = [[0.0, 0.2, 0.2, 0.3, 0.3, 0.2, 0.2, 0.0],
+                [0.2, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.2],
+                [0.2, 0.4, 0.5, 0.5, 0.5, 0.5, 0.4, 0.2],
+                [0.3, 0.4, 0.5, 0.5, 0.5, 0.5, 0.4, 0.3],
+                [0.4, 0.4, 0.5, 0.5, 0.5, 0.5, 0.4, 0.3],
+                [0.2, 0.5, 0.5, 0.5, 0.5, 0.5, 0.4, 0.2],
+                [0.2, 0.4, 0.5, 0.4, 0.4, 0.4, 0.4, 0.2],
+                [0.0, 0.2, 0.2, 0.3, 0.3, 0.2, 0.2, 0.0]]
+
+pawn_scores = [[0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8],
+               [0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7],
+               [0.3, 0.3, 0.4, 0.5, 0.5, 0.4, 0.3, 0.3],
+               [0.25, 0.25, 0.3, 0.45, 0.45, 0.3, 0.25, 0.25],
+               [0.2, 0.2, 0.2, 0.4, 0.4, 0.2, 0.2, 0.2],
+               [0.25, 0.15, 0.1, 0.2, 0.2, 0.1, 0.15, 0.25],
+               [0.25, 0.3, 0.3, 0.0, 0.0, 0.3, 0.3, 0.25],
+               [0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2]]
+
+piece_position_scores = {'N': knight_scores,
+                         'n': knight_scores[::-1],
+                         'B': bishop_scores,
+                         'b': bishop_scores[::-1],
+                         'Q': queen_scores,
+                         'q': queen_scores[::-1],
+                         'R': rook_scores,
+                         'r': rook_scores[::-1],
+                         'P': pawn_scores,
+                         'p': pawn_scores[::-1]}
 
 
 class AIPlayer:
@@ -14,39 +72,13 @@ class AIPlayer:
         self.color = color
         self.count = 0
 
-    def get_legal_moves(self, board: chess.Board=None) -> list:
+    def get_legal_moves(self, board: chess.Board = None) -> list:
         if not board:
             board = self.board
 
         return list(board.legal_moves)
 
-    def choose_move(self, board: chess.Board=None):
-        engine = load_engine_from_cmd('./sunfish.py')
-        limit = chess.engine.Limit(
-            white_clock=30, black_clock=30, white_inc=1, black_inc=1
-        )
-        game_id = random.random()
-        chosen_move = self.board.san(get_engine_move(engine, self.board, limit, game_id, debug=False))
-
-        # for move in legal_moves:
-        #     evaluation_before = self.evaluate_board()
-        #     fake_board = self.false_move(move)
-        #     evaluation_after = self.evaluate_board(fake_board)
-        #
-        #     if chosen_move is None:
-        #         chosen_move = move
-        #     else:
-        #         # if the player is white and the move results in a higher material for white
-        #         if evaluation_after > evaluation_before and self.color == "w":
-        #             chosen_move = move
-        #         # if the player is black and the move results in higher material for black
-        #         elif evaluation_before > evaluation_after and self.color == "b":
-        #             chosen_move = move
-
-        return chosen_move
-
-
-    def false_move(self, move: chess.Move=None, board: chess.Board=None) -> chess.Board:
+    def false_move(self, move: chess.Move = None, board: chess.Board = None) -> chess.Board:
         # make a move without affecting the game's current state
 
         # make a copy of the board for move testing
@@ -62,89 +94,67 @@ class AIPlayer:
 
         return board_copy
 
-
     def make_move(self, chess_board: ChessBoard):
-        # make a move an a ChessBoard object
-        move = self.choose_move()
+        # make a move an ChessBoard object
+        move = find_best_move(self.board, 3)
         chess_board._play(move=move)
         self.count += 1
 
 
-def load_engine_from_cmd(path, debug=False):
-    engine = chess.engine.popen_uci(path)
-    if hasattr(engine, "debug"):
-        engine.debug(debug)
-    return engine
-
-
-async def get_engine_move(engine, board, limit, game_id, multipv=1, debug=False):
-    if isinstance(engine, chess.engine.XBoardProtocol):
-        play_result = await engine.play(board, limit, game=game_id)
-        return play_result.move
-
-    multipv = min(multipv, board.legal_moves.count())
-    with await engine.analysis(
-        board, limit, game=game_id, info=chess.engine.INFO_ALL, multipv=multipv or None
-    ) as analysis:
-
-        infos = [None for _ in range(multipv)]
-        first = True
-        async for new_info in analysis:
-            # If multipv = 0 it means we don't want them at all,
-            # but uci requires MultiPV to be at least 1.
-            if multipv and "multipv" in new_info:
-                infos[new_info["multipv"] - 1] = new_info
-
-            # Parse optional arguments into a dict
-            if debug and "string" in new_info:
-                print(new_info["string"])
-
-            if not debug and all(infos) and "score" in analysis.info:
-                if not first:
-                    # print('\n'*(multipv+1), end='')
-                    print(f"\u001b[1A\u001b[K" * (multipv + 1), end="")
+def scoreBoard(board):
+    """
+    Score the board. A positive score is good for white, a negative score is good for black.
+    """
+    score = 0
+    for r in range(8):
+        for c in range(8):
+            piece = board.piece_at(chess.square(r, c))
+            if piece != None:
+                piece_position_score = 0
+                if piece.symbol() not in "Kk":
+                    piece_position_score = piece_position_scores[piece.symbol()][r][c]
+                if piece.symbol() in "KNBQRP":
+                    score += piece_score[piece.symbol()] + piece_position_score
                 else:
-                    first = False
+                    score -= piece_score[piece.symbol()] + piece_position_score
 
-                info = analysis.info
-                score = info["score"].relative
-                score = (
-                    f"Score: {score.score()}"
-                    if score.score() is not None
-                    else f"Mate in {score.mate()}"
-                )
-                print(
-                    f'{score}, nodes: {info.get("nodes", "N/A")}, nps: {info.get("nps", "N/A")},'
-                    f' time: {float(info.get("time", 0)):.1f}',
-                    end="",
-                )
-                print()
+    return score
 
-                for info in infos:
-                    if "pv" in info:
-                        variation = board.variation_san(info["pv"][:10])
-                    else:
-                        variation = ""
 
-                    if "score" in info:
-                        score = info["score"].relative
-                        score = (
-                            math.tanh(score.score() / 600)
-                            if score.score() is not None
-                            else score.mate()
-                        )
-                        key, *val = info.get("string", "").split()
-                        if key == "pv_nodes":
-                            nodes = int(val[0])
-                            rel = nodes / analysis.info["nodes"]
-                            score_rel = f"({score:.2f}, {rel*100:.0f}%)"
-                        else:
-                            score_rel = f"({score:.2f})"
-                    else:
-                        score_rel = ""
+# Алгоритм минимакс с альфа-бета отсечением
+def minimax(board, depth, alpha, beta, maximizing_player):
+    if depth == 0 or board.is_game_over():
+        return maximizing_player*scoreBoard(board)
 
-                    # Something about N
-                    print(f'{info["multipv"]}: {score_rel} {variation}')
+    legal_moves = list(board.legal_moves)
 
-        return analysis.info["pv"][0]
+    max_eval = -float('inf')
+    for move in legal_moves:
+        tboard = board.copy()
+        tboard.push(move)
+        eval = minimax(tboard, depth - 1, -beta, -alpha, -maximizing_player)
+        max_eval = max(max_eval, eval)
+        alpha = max(alpha, eval)
+        if beta <= alpha:
+            break  # Альфа-бета отсечение
+    return -max_eval
 
+
+# Функция для поиска лучшего хода
+def find_best_move(board, depth):
+    best_move = None
+    best_value = -float('inf')
+
+    legal_moves = list(board.legal_moves)
+
+    for move in legal_moves:
+        tboard = board.copy()
+        tboard.push(move)
+        move_value = minimax(tboard, depth - 1, -float('inf'), float('inf'), -1)
+        print(move_value, move)
+
+        if move_value > best_value:
+            best_value = move_value
+            best_move = move
+
+    return best_move

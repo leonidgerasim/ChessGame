@@ -27,9 +27,9 @@ turns_taken = {
     False: False
 }
 
-move_sound = mixer.Sound("sound_effects/piece_move.mp3")
-check_sound = mixer.Sound("sound_effects/check.mp3")
-checkmate_sound = mixer.Sound("sound_effects/checkmate.mp3")
+# move_sound = mixer.Sound("sound_effects/piece_move.mp3")
+# check_sound = mixer.Sound("sound_effects/check.mp3")
+# checkmate_sound = mixer.Sound("sound_effects/checkmate.mp3")
 
 SOURCE_POSITION = None
 DESTINATION_POSITION = None
@@ -151,18 +151,18 @@ def draw_chessboard(board: ChessBoard):
                     board.square_size*0.25
                 )
 
-def play_sound(board):
-    if board.is_checkmate():
-        mixer.Sound.play(checkmate_sound)
-
-    elif board.is_check():
-        mixer.Sound.play(check_sound)
-
-    elif board.is_stalemate():
-        pass
-
-    else:
-        mixer.Sound.play(move_sound)
+# def play_sound(board):
+#     if board.is_checkmate():
+#         mixer.Sound.play(checkmate_sound)
+#
+#     elif board.is_check():
+#         mixer.Sound.play(check_sound)
+#
+#     elif board.is_stalemate():
+#         pass
+#
+#     else:
+#         mixer.Sound.play(move_sound)
 
 def play(source_coordinates: tuple=None, destination_coordinates: tuple=None):
     global board, TURN, IS_FIRST_MOVE, chess_board
@@ -176,7 +176,7 @@ def play(source_coordinates: tuple=None, destination_coordinates: tuple=None):
     if not isinstance(player, str):
         # AI model to play
         player.make_move(chess_board)
-        play_sound(board)
+        # play_sound(board)
 
         TURN = not TURN
 
@@ -189,7 +189,7 @@ def play(source_coordinates: tuple=None, destination_coordinates: tuple=None):
             # user to play
             print("User is making move")
             chess_board.play(source_coordinates, destination_coordinates)
-            play_sound(board)
+            # play_sound(board)
             TURN = not TURN
 
     if IS_FIRST_MOVE:
